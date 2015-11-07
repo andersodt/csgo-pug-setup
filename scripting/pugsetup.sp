@@ -37,6 +37,7 @@ ConVar g_AutoUpdateCvar;
 ConVar g_CvarVersionCvar;
 ConVar g_DemoNameFormatCvar;
 ConVar g_DemoTimeFormatCvar;
+ConVar g_DoVoteForKnifeRoundDecisionCvar;
 ConVar g_EchoReadyMessagesCvar;
 ConVar g_ExcludeSpectatorsCvar;
 ConVar g_ExecDefaultConfigCvar;
@@ -140,6 +141,13 @@ char g_ClanTag[MAXPLAYERS+1][CLANTAG_LENGTH];
 
 /** Knife round data **/
 int g_KnifeWinner = -1;
+enum KnifeDecision {
+    KnifeDecision_None,
+    KnifeDecision_Stay,
+    KnifeDecision_Swap,
+}
+KnifeDecision g_KnifeRoundVotes[MAXPLAYERS+1];
+int g_KnifeRoundVotesCast = 0;
 
 /** Forwards **/
 Handle g_hOnForceEnd = INVALID_HANDLE;
@@ -207,6 +215,7 @@ public void OnPluginStart() {
     g_AutoUpdateCvar = CreateConVar("sm_pugsetup_autoupdate", "1", "Whether the plugin may (if the \"Updater\" plugin is loaded) automatically update.");
     g_DemoNameFormatCvar = CreateConVar("sm_pugsetup_demo_name_format", "pug_{MAP}_{TIME}", "Naming scheme for demos. You may use {MAP}, {TIME}, and {TEAMSIZE}. Make sure there are no spaces or colons in this.");
     g_DemoTimeFormatCvar = CreateConVar("sm_pugsetup_time_format", "%Y-%m-%d_%H", "Time format to use when creating demo file names. Don't tweak this unless you know what you're doing! Avoid using spaces or colons.");
+    g_DoVoteForKnifeRoundDecisionCvar = CreateConVar("sm_pugsetup_vote_for_knife_round_decision", "0", "If 0, the first player to type .stay/.swap/.t/.ct will decide the round round winner decision - otherwise a majority vote will be used");
     g_EchoReadyMessagesCvar = CreateConVar("sm_pugsetup_echo_ready_messages", "1", "Whether to print to chat when clients ready/unready.");
     g_ExcludeSpectatorsCvar = CreateConVar("sm_pugsetup_exclude_spectators", "0", "Whether to exclude spectators in the ready-up counts. Setting this to 1 will exclude specators from being selected by captains as well.");
     g_ExecDefaultConfigCvar = CreateConVar("sm_pugsetup_exec_default_game_config", "1", "Whether gamemode_competitive (the matchmaking config) should be executed before the live config.");
@@ -220,7 +229,7 @@ public void OnPluginStart() {
     g_PausingEnabledCvar = CreateConVar("sm_pugsetup_pausing_enabled", "1", "Whether pausing is allowed.");
     g_PostGameCfgCvar = CreateConVar("sm_pugsetup_postgame_cfg", "sourcemod/pugsetup/warmup.cfg", "Config to execute after games finish; should be in the csgo/cfg directory.");
     g_QuickRestartsCvar = CreateConVar("sm_pugsetup_quick_restarts", "0", "If set to 1, going live won't restart 3 times and will just do a single restart.");
-    g_RandomizeMapOrderCvar = CreateConVar("sm_pugsetup_randomize_maps", "1", "When maps are shown in the map vote/veto, whether their order ise randomized.");
+    g_RandomizeMapOrderCvar = CreateConVar("sm_pugsetup_randomize_maps", "1", "When maps are shown in the map vote/veto, whether their order is randomized.");
     g_RandomOptionInMapVoteCvar = CreateConVar("sm_pugsetup_random_map_vote_option", "1", "Whether option 1 in a mapvote is the random map choice.");
     g_SetupEnabledCvar = CreateConVar("sm_pugsetup_setup_enabled", "1", "Whether the sm_setup and sm_10man commands are enabled");
     g_SnakeCaptainsCvar = CreateConVar("sm_pugsetup_snake_captain_picks", "0", "Whether captains will pick players in a \"snaked\" fashion rather than alternating, e.g. ABBAABBA rather than ABABABAB.");
@@ -443,7 +452,6 @@ public Action Timer_CheckReady(Handle timer) {
             if (g_TeamType == TeamType_Captains) {
                 if (IsPlayer(g_capt1) && IsPlayer(g_capt2) && g_capt1 != g_capt2) {
                     g_LiveTimerRunning = false;
-                    ClearAllHintTexts();
                     CreateTimer(1.0, StartPicking, _, TIMER_FLAG_NO_MAPCHANGE);
                     return Plugin_Stop;
                 } else {
@@ -451,7 +459,6 @@ public Action Timer_CheckReady(Handle timer) {
                 }
             } else {
                 g_LiveTimerRunning = false;
-                ClearAllHintTexts();
                 ReadyToStart();
                 return Plugin_Stop;
             }
@@ -460,7 +467,6 @@ public Action Timer_CheckReady(Handle timer) {
             if (g_MapType == MapType_Veto) {
                 if (IsPlayer(g_capt1) && IsPlayer(g_capt2) && g_capt1 != g_capt2) {
                     g_LiveTimerRunning = false;
-                    ClearAllHintTexts();
                     PugSetupMessageToAll("%t", "VetoMessage");
                     CreateTimer(2.0, MapSetup, _, TIMER_FLAG_NO_MAPCHANGE);
                     return Plugin_Stop;
@@ -470,7 +476,6 @@ public Action Timer_CheckReady(Handle timer) {
 
             } else {
                 g_LiveTimerRunning = false;
-                ClearAllHintTexts();
                 PugSetupMessageToAll("%t", "VoteMessage");
                 CreateTimer(2.0, MapSetup, _, TIMER_FLAG_NO_MAPCHANGE);
                 return Plugin_Stop;
@@ -716,6 +721,12 @@ public Action Command_ForceStart(int client, int args) {
         return Plugin_Handled;
 
     PermissionCheck(client, "sm_forcestart")
+
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsPlayer(i) && !IsReady(i)) {
+            ReadyPlayer(i, false);
+        }
+    }
     g_ForceStartSignal = true;
     return Plugin_Handled;
 }
@@ -1301,7 +1312,13 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
         FindAliasFromCommand("sm_stay", stayCmd);
         FindAliasFromCommand("sm_swap", swapCmd);
 
-        PugSetupMessageToAll("%t", "KnifeRoundWinner", teamString, stayCmd, swapCmd);
+        if (g_DoVoteForKnifeRoundDecisionCvar.IntValue != 0) {
+            CreateTimer(20.0, Timer_HandleKnifeDecisionVote, _, TIMER_FLAG_NO_MAPCHANGE);
+            PugSetupMessageToAll("%t", "KnifeRoundWinnerVote", teamString, stayCmd, swapCmd);
+        } else {
+            PugSetupMessageToAll("%t", "KnifeRoundWinner", teamString, stayCmd, swapCmd);
+        }
+
     }
 }
 
