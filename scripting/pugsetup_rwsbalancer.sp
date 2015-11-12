@@ -79,6 +79,7 @@ public void OnPluginStart() {
 
     RegAdminCmd("sm_showrws", Command_DumpRWS, ADMFLAG_KICK, "Dumps all player historical rws and rounds played");
     RegConsoleCmd("sm_rws", Command_RWS, "Show player's historical rws");
+
     RegConsoleCmd("sm_period_rws", Command_PeriodRWS, "Show player's period rws");
     AddChatAlias(".prws", "sm_period_rws");
 
@@ -122,8 +123,9 @@ public void OnClientCookiesCached(int client) {
     g_PlayerRWS[client] = GetCookieFloat(client, g_RWSCookie);
     g_PlayerRounds[client] = GetCookieInt(client, g_RoundsPlayedCookie);
 
-    g_PlayerPeriodRWS[client] = GetCookieFloat(client, g_RWSCookie);
-    g_PlayerPeriodRounds[client] = GetCookieInt(client, g_RoundsPlayedCookie);
+    g_PlayerPeriodRWS[client] = GetCookieFloat(client, g_PeriodRWSCookie);
+    g_PlayerPeriodRounds[client] = GetCookieInt(client, g_PeriodRoundsPlayedCookie);
+
     g_PlayerHasStats[client] = true;
 }
 
