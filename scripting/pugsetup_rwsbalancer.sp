@@ -79,6 +79,7 @@ public void OnPluginStart() {
 
     RegAdminCmd("sm_showrws", Command_DumpRWS, ADMFLAG_KICK, "Dumps all player historical rws and rounds played");
     RegConsoleCmd("sm_rws", Command_RWS, "Show player's historical rws");
+    AddChatAlias(".rws", "sm_rws");
 
     RegConsoleCmd("sm_period_rws", Command_PeriodRWS, "Show player's period rws");
     AddChatAlias(".prws", "sm_period_rws");
