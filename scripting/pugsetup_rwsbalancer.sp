@@ -79,7 +79,8 @@ public void OnPluginStart() {
 
     RegAdminCmd("sm_showrws", Command_DumpRWS, ADMFLAG_KICK, "Dumps all player historical rws and rounds played");
     RegConsoleCmd("sm_rws", Command_RWS, "Show player's historical rws");
-    AddChatAlias(".rws", "sm_rws");
+    RegConsoleCmd("sm_period_rws", Command_PeriodRWS, "Show player's period rws");
+    AddChatAlias(".prws", "sm_period_rws");
 
     g_AllowRWSCommandCvar = CreateConVar("sm_pugsetup_rws_allow_rws_command", "0", "Whether players can use the .rws or !rws command on other players");
     g_RecordRWSCvar = CreateConVar("sm_pugsetup_rws_record_stats", "1", "Whether rws should be recorded during live matches (set to 0 to disable changing players rws stats)");
@@ -612,6 +613,28 @@ public Action Command_RWS(int client, int args) {
         }
     } else {
         PugSetupMessage(client, "Usage: .rws <player>");
+    }
+
+    return Plugin_Handled;
+}
+
+public Action Command_PeriodRWS(int client, int args) {
+    if (g_AllowRWSCommandCvar.IntValue == 0) {
+        return Plugin_Handled;
+    }
+
+    char arg1[32];
+    if (args >= 1 && GetCmdArg(1, arg1, sizeof(arg1))) {
+        int target = FindTarget(client, arg1, true, false);
+        if (target != -1) {
+            if (HasStats(target))
+                PugSetupMessage(client, "%N has a RWS of %.1f with %d rounds played",
+                              target, g_PlayerPeriodRWS[target], g_PlayerPeriodRounds[target]);
+            else
+                PugSetupMessage(client, "%N does not currently have stats stored", target);
+        }
+    } else {
+        PugSetupMessage(client, "Usage: .prws <player>");
     }
 
     return Plugin_Handled;
