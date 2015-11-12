@@ -46,6 +46,7 @@ bool g_PlayerHasStats[MAXPLAYERS+1];
 
 /** Rounds stats **/
 int g_RoundPoints[MAXPLAYERS+1];
+int g_RoundHealth[MAXPLAYERS+1];
 
 /** Cvars **/
 ConVar g_AllowRWSCommandCvar;
@@ -133,6 +134,7 @@ public void OnClientConnected(int client) {
     g_PlayerPeriodRounds[client] = 0;
 
     g_RoundPoints[client] = 0;
+    g_RoundHealth[client] = 100;
     g_PlayerHasStats[client] = false;
 }
 
@@ -440,10 +442,16 @@ public Action Event_DamageDealt(Event event, const char[] name, bool dontBroadca
 
     if (validAttacker && validVictim && HelpfulAttack(attacker, victim) ) {
         int damage = event.GetInt("dmg_health");
-        if (damage > 100) 
-            damage = 100;
-        
-        g_RoundPoints[attacker] += damage;
+
+        // Make sure the attacker doesn't get extra credit for doing more 
+        // damage than was done by the killing shot
+        if (damage > g_RoundHealth[victim]) {
+            g_RoundPoints[attacker] += g_RoundHealth[victim];
+            g_RoundHealth[victim] = 0;
+        } else {
+            g_RoundPoints[attacker] += damage;
+            g_RoundHealth[victim] -= damage;
+        }
     }
 }
 
@@ -475,6 +483,9 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
         if (IsPlayer(i) && HasStats(i)) {
             // Reset the round points for the next round
             g_RoundPoints[i] = 0;
+
+            // Reset the health for the next round
+            g_RoundHealth[i] = 100;
         }
     }
 
