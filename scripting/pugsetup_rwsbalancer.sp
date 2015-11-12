@@ -645,6 +645,6 @@ public Action Command_PeriodRWS(int client, int args) {
 
 public void OnPlayerAddedToCaptainMenu(Menu menu, int client, char[] menuString, int length) {
     if (g_ShowRWSOnMenuCvar.IntValue != 0 && HasStats(client)) {
-        Format(menuString, length, "%N [%.1f RWS]", client, g_PlayerRWS[client]);
+        Format(menuString, length, "%N [%.1f RWS]", client, g_PlayerPeriodRWS[client]);
     }
 }
