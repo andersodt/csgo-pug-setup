@@ -32,9 +32,16 @@
 Handle g_RWSCookie = INVALID_HANDLE;
 Handle g_RoundsPlayedCookie = INVALID_HANDLE;
 
+Handle g_PeriodRWSCookie = INVALID_HANDLE;
+Handle g_PeriodRoundsPlayedCookie = INVALID_HANDLE;
+
 /** Client stats **/
 float g_PlayerRWS[MAXPLAYERS+1];
 int g_PlayerRounds[MAXPLAYERS+1];
+
+float g_PlayerPeriodRWS[MAXPLAYERS+1];
+int g_PlayerPeriodRounds[MAXPLAYERS+1];
+
 bool g_PlayerHasStats[MAXPLAYERS+1];
 
 /** Rounds stats **/
@@ -82,6 +89,9 @@ public void OnPluginStart() {
 
     g_RWSCookie = RegClientCookie("pugsetup_rws", "Pugsetup RWS rating", CookieAccess_Protected);
     g_RoundsPlayedCookie = RegClientCookie("pugsetup_roundsplayed", "Pugsetup rounds played", CookieAccess_Protected);
+
+    g_PeriodRWSCookie = RegClientCookie("pugsetup_period_rws", "Pugsetup RWS rating over the current period", CookieAccess_Protected);
+    g_PeriodRoundsPlayedCookie = RegClientCookie("pugsetup_period_roundsplayed", "Pugsetup rounds played over the current period", CookieAccess_Protected);
 }
 
 public void OnAllPluginsLoaded() {
@@ -109,12 +119,19 @@ public void OnClientCookiesCached(int client) {
 
     g_PlayerRWS[client] = GetCookieFloat(client, g_RWSCookie);
     g_PlayerRounds[client] = GetCookieInt(client, g_RoundsPlayedCookie);
+
+    g_PlayerPeriodRWS[client] = GetCookieFloat(client, g_RWSCookie);
+    g_PlayerPeriodRounds[client] = GetCookieInt(client, g_RoundsPlayedCookie);
     g_PlayerHasStats[client] = true;
 }
 
 public void OnClientConnected(int client) {
     g_PlayerRWS[client] = 0.0;
     g_PlayerRounds[client] = 0;
+
+    g_PlayerPeriodRWS[client] = 0.0;
+    g_PlayerPeriodRounds[client] = 0;
+
     g_RoundPoints[client] = 0;
     g_PlayerHasStats[client] = false;
 }
@@ -133,6 +150,9 @@ public void WriteStats(int client) {
 
     SetCookieInt(client, g_RoundsPlayedCookie, g_PlayerRounds[client]);
     SetCookieFloat(client, g_RWSCookie, g_PlayerRWS[client]);
+
+    SetCookieInt(client, g_PeriodRoundsPlayedCookie, g_PlayerPeriodRounds[client]);
+    SetCookieFloat(client, g_PeriodRWSCookie, g_PlayerPeriodRWS[client]);
 }
 
 public void SplitRemainingPlayers(int teamSize, ArrayList playerList, ArrayList &remainingTeamTwoOptions) {
@@ -492,12 +512,26 @@ static void RWSUpdate(int client, bool winner) {
     float alpha = GetAlphaFactor(client);
     g_PlayerRWS[client] = (1.0 - alpha) * g_PlayerRWS[client] + alpha * rws;
     g_PlayerRounds[client]++;
+
+    float periodAlpha = GetPeriodAlphaFactor(client);
+    g_PlayerPeriodRWS[client] = (1.0 - periodAlpha) * g_PlayerPeriodRWS[client] + periodAlpha * rws;
+    g_PlayerPeriodRounds[client]++;
     
     LogDebug("RoundUpdate(%L), alpha=%f, round_points=%i, round_rws=%f, new_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerRWS[client]);
+    LogDebug("RoundUpdate(%L), alpha=%f, round_points=%i, round_rws=%f, new_period_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerPeriodRWS[client]);
 }
 
 static float GetAlphaFactor(int client) {
     float rounds = float(g_PlayerRounds[client]);
+    if (rounds < ROUNDS_FINAL) {
+        return ALPHA_INIT + (ALPHA_INIT - ALPHA_FINAL) / (-ROUNDS_FINAL) * rounds;
+    } else {
+        return ALPHA_FINAL;
+    }
+}
+
+static float GetPeriodAlphaFactor(int client) {
+    float rounds = float(g_PlayerPeriodRounds[client]);
     if (rounds < ROUNDS_FINAL) {
         return ALPHA_INIT + (ALPHA_INIT - ALPHA_FINAL) / (-ROUNDS_FINAL) * rounds;
     } else {
