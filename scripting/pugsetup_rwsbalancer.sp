@@ -630,7 +630,7 @@ public Action Command_PeriodRWS(int client, int args) {
         int target = FindTarget(client, arg1, true, false);
         if (target != -1) {
             if (HasStats(target))
-                PugSetupMessage(client, "%N has a RWS of %.1f with %d rounds played",
+                PugSetupMessage(client, "%N has a RWS of %.1f with %d rounds played over the current period",
                               target, g_PlayerPeriodRWS[target], g_PlayerPeriodRounds[target]);
             else
                 PugSetupMessage(client, "%N does not currently have stats stored", target);
