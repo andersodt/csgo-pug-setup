@@ -42,11 +42,20 @@ int g_PlayerRounds[MAXPLAYERS+1];
 float g_PlayerPeriodRWS[MAXPLAYERS+1];
 int g_PlayerPeriodRounds[MAXPLAYERS+1];
 
+// HLTV.org Rating
+float g_PlayerRating[MAXPLAYERS+1];
+int g_PlayerRatingRoundsSurvived[MAXPLAYERS+1];
+int g_PlayerRatingTotalRounds[MAXPLAYERS+1];
+int g_PlayerRatingKills[MAXPLAYERS+1];
+int g_PlayerRatingMultiKillValue[MAXPLAYERS+1];
+
 bool g_PlayerHasStats[MAXPLAYERS+1];
 
 /** Rounds stats **/
 int g_RoundPoints[MAXPLAYERS+1];
 int g_RoundHealth[MAXPLAYERS+1];
+int g_RoundKills[MAXPLAYERS+1];
+int g_RoundSurvived[MAXPLAYERS+1];
 
 /** Cvars **/
 ConVar g_AllowRWSCommandCvar;
@@ -76,10 +85,14 @@ public void OnPluginStart() {
     HookEvent("player_death", Event_PlayerDeath);
     HookEvent("player_hurt", Event_DamageDealt);
     HookEvent("round_end", Event_RoundEnd);
+    HookEvent("round_start", Event_RoundStart);
 
     RegAdminCmd("sm_showrws", Command_DumpRWS, ADMFLAG_KICK, "Dumps all player historical rws and rounds played");
     RegConsoleCmd("sm_rws", Command_RWS, "Show player's historical rws");
     AddChatAlias(".trws", "sm_rws");
+
+    RegConsoleCmd("sm_hltv_rating", Command_Rating, "Show player's rating");
+    AddChatAlias(".rating", "sm_hltv_rating");
 
     RegConsoleCmd("sm_period_rws", Command_PeriodRWS, "Show player's period rws");
     AddChatAlias(".rws", "sm_period_rws");
@@ -96,6 +109,12 @@ public void OnPluginStart() {
 
     g_PeriodRWSCookie = RegClientCookie("pugsetup_period_rws", "Pugsetup RWS rating over the current period", CookieAccess_Protected);
     g_PeriodRoundsPlayedCookie = RegClientCookie("pugsetup_period_roundsplayed", "Pugsetup rounds played over the current period", CookieAccess_Protected);
+
+    g_RatingCookie = RegClientCookie("pugsetup_rating", "Pugsetup HLTV rating", CookieAccess_Protected);
+    g_RatingRoundsSurvivedCookie = RegClientCookie("pugsetup_rating_roundssurvived", "Pugsetup HLTV rating rounds played", CookieAccess_Protected);
+    g_RatingTotalRoundsCookie = RegClientCookie("pugsetup_rating_totalrounds", "Pugsetup HLTV rating total rounds", CookieAccess_Protected);
+    g_RatingKillsCookie = RegClientCookie("pugsetup_rating_kills", "Pugsetup HLTV rating kills", CookieAccess_Protected);
+    g_RatingMultiKillValueCookie = RegClientCookie("pugsetup_rating_multikillvalue", "Pugsetup HLTV rating multi kill value", CookieAccess_Protected);
 }
 
 public void OnAllPluginsLoaded() {
@@ -127,6 +146,12 @@ public void OnClientCookiesCached(int client) {
     g_PlayerPeriodRWS[client] = GetCookieFloat(client, g_PeriodRWSCookie);
     g_PlayerPeriodRounds[client] = GetCookieInt(client, g_PeriodRoundsPlayedCookie);
 
+    g_PlayerRating[client] = GetCookieFloat(client, g_RatingCookie);
+    g_PlayerRatingRoundsSurvived[client] = GetCookieInt(client, g_RatingRoundsSurvivedCookie);
+    g_PlayerRatingTotalRounds[client] = GetCookieInt(client, g_RatingTotalRoundsCookie);
+    g_PlayerRatingKills[client] = GetCookieInt(client, g_RatingKillsCookie);
+    g_PlayerRatingMultiKillValue[client] = GetCookieInt(client, g_RatingMultiKillValueCookie);
+
     g_PlayerHasStats[client] = true;
 }
 
@@ -137,8 +162,17 @@ public void OnClientConnected(int client) {
     g_PlayerPeriodRWS[client] = 0.0;
     g_PlayerPeriodRounds[client] = 0;
 
+    g_PlayerRating[client] = 0.0;
+    g_PlayerRatingRoundsSurvived[client] = 0;
+    g_PlayerRatingTotalRounds[client] = 0;
+    g_PlayerRatingKills[client] = 0;
+    g_PlayerRatingMultiKillValue[client] = 0;
+
     g_RoundPoints[client] = 0;
     g_RoundHealth[client] = 100;
+    g_RoundKills[client] = 0;
+    g_RoundSurvived[client] = 1;
+    
     g_PlayerHasStats[client] = false;
 }
 
@@ -159,6 +193,12 @@ public void WriteStats(int client) {
 
     SetCookieInt(client, g_PeriodRoundsPlayedCookie, g_PlayerPeriodRounds[client]);
     SetCookieFloat(client, g_PeriodRWSCookie, g_PlayerPeriodRWS[client]);
+
+    SetCookieFloat(client, g_RatingCookie, g_PlayerRating[client]);
+    SetCookieInt(client, g_RatingRoundsSurvivedCookie, g_PlayerRatingRoundsSurvived[client]);
+    SetCookieInt(client, g_RatingTotalRoundsCookie, g_PlayerRatingTotalRounds[client]);
+    SetCookieInt(client, g_RatingKillsCookie, g_PlayerRatingKills[client] );
+    SetCookieInt(client, g_RatingMultiKillValueCookie, g_PlayerRatingMultiKillValue[client]);
 }
 
 public void SplitRemainingPlayers(int teamSize, ArrayList playerList, ArrayList &remainingTeamTwoOptions) {
@@ -262,8 +302,7 @@ public void FindSecondTeam(ArrayList buffer, ArrayList remainingPlayers, int don
     }
 }
 
- public void FindFirstTeam(ArrayList buffer, ArrayList players, int done, int begin, int end, ArrayList &final_team_one, ArrayList &final_team_two, float &minRwsDifference)
-  {
+public void FindFirstTeam(ArrayList buffer, ArrayList players, int done, int begin, int end, ArrayList &final_team_one, ArrayList &final_team_two, float &minRwsDifference) {
     for (int i = begin; i < end; i++)
     {
     	buffer.Set(done, players.Get(i));
@@ -333,7 +372,7 @@ public void FindSecondTeam(ArrayList buffer, ArrayList remainingPlayers, int don
         	FindFirstTeam(buffer, players, done+1, i+1, end, final_team_one, final_team_two, minRwsDifference);
       }
     }
-  }
+}
 
 
 public void FindCombinations(int m, ArrayList players, ArrayList &final_team_one, ArrayList &final_team_two, float &minRwsDifference){
@@ -424,6 +463,10 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 
     if (validAttacker && validVictim && HelpfulAttack(attacker, victim)) {
         g_RoundPoints[attacker] += 100;
+        g_RoundKills[attacker]++;
+    }
+    if (validVictim) {
+        g_RoundSurvived[victim] = 0;
     }
 }
 
@@ -441,19 +484,27 @@ public Action Event_DamageDealt(Event event, const char[] name, bool dontBroadca
 
     int attacker = GetClientOfUserId(event.GetInt("attacker"));
     int victim = GetClientOfUserId(event.GetInt("userid"));
+    int damage = event.GetInt("dmg_health");
     bool validAttacker = IsValidClient(attacker);
     bool validVictim = IsValidClient(victim);
 
-    if (validAttacker && validVictim && HelpfulAttack(attacker, victim) ) {
-        int damage = event.GetInt("dmg_health");
-
+    if (validAttacker && validVictim && HelpfulAttack(attacker, victim) ) {        
         // Make sure the attacker doesn't get extra credit for doing more 
         // damage than was done by the killing shot
         if (damage > g_RoundHealth[victim]) {
             g_RoundPoints[attacker] += g_RoundHealth[victim];
-            g_RoundHealth[victim] = 0;
         } else {
             g_RoundPoints[attacker] += damage;
+            
+        }
+    }
+
+    // If the victim is valid then you should always
+    // detract their HP.
+    if (validVictim) {
+        if (damage > g_RoundHealth[victim]) {
+            g_RoundHealth[victim] = 0;
+        } else {
             g_RoundHealth[victim] -= damage;
         }
     }
@@ -475,14 +526,27 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
     if (!IsMatchLive() || g_RecordRWSCvar.IntValue == 0)
         return;
 
-    int winner = event.GetInt("winner");
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
             int team = GetClientTeam(i);
             if (team == CS_TEAM_CT || team == CS_TEAM_T)
-                RWSUpdate(i, true);
+                RWSUpdate(i);
+                RatingUpdate(i);
         }
     }
+
+}
+
+/**
+ * Round start event, reset round based values for everyone
+ */
+public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
+    if (!IsMatchLive() || g_RecordRWSCvar.IntValue == 0)
+        return;
+
+    // Should do calculations here
+
+    // Reset the stats
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
             // Reset the round points for the next round
@@ -490,38 +554,36 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 
             // Reset the health for the next round
             g_RoundHealth[i] = 100;
+
+            // Rest the kills and the round survived var
+            g_RoundKills[i] = 0;
+            g_RoundSurvived[i] = 1;
         }
     }
-
 }
 
 /**
  * Here we apply magic updates to a player's rws based on the previous round.
  */
-static void RWSUpdate(int client, bool winner) {
+static void RWSUpdate(int client) {
     float rws = 0.0;
-    if (winner) {
-        int playerCount = 0;
-        int sum = 0;
-        for (int i = 1; i <= MaxClients; i++) {
-            if (IsPlayer(i)) {
-                sum += g_RoundPoints[i];
-                playerCount++;
-            }
+    int playerCount = 0;
+    int sum = 0;
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsPlayer(i)) {
+            sum += g_RoundPoints[i];
+            playerCount++;
         }
+    }
 
-        if (sum != 0) {
-            // scaled so it's always considered "out of 5 players" so different team sizes
-            // don't give inflated rws
-            rws = 100.0 * float(playerCount) / 10.0 * float(g_RoundPoints[client]) / float(sum);
+    if (sum != 0) {
+        // scaled so it's always considered "out of 5 players" so different team sizes
+        // don't give inflated rws
+        rws = 100.0 * float(playerCount) / 10.0 * float(g_RoundPoints[client]) / float(sum);
 
-            
-        } else {
-            return;
-        }
-
+        
     } else {
-        rws = 0.0;
+        return;
     }
 
     float alpha = GetAlphaFactor(client);
@@ -534,6 +596,25 @@ static void RWSUpdate(int client, bool winner) {
     
     LogDebug("RoundUpdate(%L), alpha=%f, round_points=%i, round_rws=%f, new_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerRWS[client]);
     LogDebug("RoundUpdate(%L), alpha=%f, round_points=%i, round_rws=%f, new_period_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerPeriodRWS[client]);
+}
+
+static void RatingUpdate(int client) {
+    float AverageKPR = 0.679; // (average kills per round)
+    float AverageSPR = 0.317; // (average survived rounds per round)
+    float AverageRMK = 1.277; // (average value calculated from rounds with multiple kills: (1K + 4*2K + 9*3K + 16*4K + 25*5K)/Rounds) 
+
+    g_PlayerRatingTotalRounds[i]++;
+
+    g_PlayerRatingKills[i] +=  g_RoundKills[i];
+    g_PlayerRatingRoundsSurvived[i] +=  g_RoundSurvived[i];
+    g_PlayerRatingMultiKillValue[i] +=  g_RoundKills[i] * g_RoundKills[i];
+
+    float killRating = g_PlayerRatingKills[i] / g_PlayerRatingTotalRounds[i] / AverageKPR;
+    float survivalRating = g_PlayerRatingRoundsSurvived[i] / g_PlayerRatingTotalRounds[i] / AverageSPR;
+    float multiKillRating = g_PlayerRatingMultiKillValue[i]  / g_PlayerRatingTotalRounds[i] / AverageRMK;
+
+    g_PlayerRating[i] = (killRating = 0.7*survivalRating + multiKillRating) / 2.7;
+
 }
 
 static float GetAlphaFactor(int client) {
@@ -638,6 +719,28 @@ public Action Command_PeriodRWS(int client, int args) {
         }
     } else {
         PugSetupMessage(client, "Usage: .rws <player>");
+    }
+
+    return Plugin_Handled;
+}
+
+public Action Command_Rating(int client, int args) {
+    if (g_AllowRWSCommandCvar.IntValue == 0) {
+        return Plugin_Handled;
+    }
+
+    char arg1[32];
+    if (args >= 1 && GetCmdArg(1, arg1, sizeof(arg1))) {
+        int target = FindTarget(client, arg1, true, false);
+        if (target != -1) {
+            if (HasStats(target))
+                PugSetupMessage(client, "%N has a rating of %.1f with %d rounds played",
+                              target, g_PlayerRating[target], g_PlayerRatingTotalRounds[target]);
+            else
+                PugSetupMessage(client, "%N does not currently have stats stored", target);
+        }
+    } else {
+        PugSetupMessage(client, "Usage: .rating <player>");
     }
 
     return Plugin_Handled;
