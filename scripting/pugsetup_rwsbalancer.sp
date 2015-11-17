@@ -72,7 +72,6 @@ ConVar g_ShowRWSOnMenuCvar;
 bool g_ManuallySetCaptains = false;
 bool g_SetTeamBalancer = false;
 
-
 public Plugin myinfo = {
     name = "CS:GO PugSetup: RWS balancer",
     author = "splewis",
@@ -117,7 +116,7 @@ public void OnPluginStart() {
     g_PeriodRoundsPlayedCookie = RegClientCookie("pugsetup_period_roundsplayed", "Pugsetup rounds played over the current period", CookieAccess_Protected);
 
     g_RatingCookie = RegClientCookie("pugsetup_rating", "Pugsetup HLTV rating", CookieAccess_Protected);
-    g_RatingRoundsSurvivedCookie = RegClientCookie("pugsetup_rating_roundssurvived", "Pugsetup HLTV rating rounds played", CookieAccess_Protected);
+    g_RatingRoundsSurvivedCookie = RegClientCookie("pugsetup_rating_roundssurvived", "Pugsetup HLTV rating rounds survived", CookieAccess_Protected);
     g_RatingTotalRoundsCookie = RegClientCookie("pugsetup_rating_totalrounds", "Pugsetup HLTV rating total rounds", CookieAccess_Protected);
     g_RatingKillsCookie = RegClientCookie("pugsetup_rating_kills", "Pugsetup HLTV rating kills", CookieAccess_Protected);
     g_RatingMultiKillValueCookie = RegClientCookie("pugsetup_rating_multikillvalue", "Pugsetup HLTV rating multi kill value", CookieAccess_Protected);
@@ -623,12 +622,12 @@ static void RatingUpdate(int client) {
 
     //LogDebug("RoundUpdateRating(%L), g_RoundKills=%f, g_RoundSurvived=%f, survivalRating=%f, multirating=%f", client, g_playerRating[client], killRating, survivalRating, multiKillRating);
     LogDebug("RoundUpdateRating(%L)", client);
-    LogDebug("roundkills(%f)", g_RoundKills[client]);
-    LogDebug("round survived(%f)", g_RoundSurvived[client]);
-    LogDebug("g_PlayerRatingKills(%f)", g_PlayerRatingKills[client]);
-    LogDebug("g_PlayerRatingRoundsSurvived(%f)",  g_PlayerRatingRoundsSurvived[client]);
-    LogDebug("g_PlayerRatingMultiKillValue(%f)",  g_PlayerRatingMultiKillValue[client]);
-    LogDebug("g_PlayerRatingTotalRounds(%f)",  g_PlayerRatingTotalRounds[client]);
+    LogDebug("roundkills(%d)", g_RoundKills[client]);
+    LogDebug("round survived(%d)", g_RoundSurvived[client]);
+    LogDebug("g_PlayerRatingKills(%d)", g_PlayerRatingKills[client]);
+    LogDebug("g_PlayerRatingRoundsSurvived(%d)",  g_PlayerRatingRoundsSurvived[client]);
+    LogDebug("g_PlayerRatingMultiKillValue(%d)",  g_PlayerRatingMultiKillValue[client]);
+    LogDebug("g_PlayerRatingTotalRounds(%d)",  g_PlayerRatingTotalRounds[client]);
     LogDebug("RoundUpdateRating(%L), rating=%f, killRating=%f, survivalRating=%f, multirating=%f", client, g_PlayerRating[client], killRating, survivalRating, multiKillRating);
 }
 
