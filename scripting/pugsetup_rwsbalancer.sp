@@ -35,6 +35,12 @@ Handle g_RoundsPlayedCookie = INVALID_HANDLE;
 Handle g_PeriodRWSCookie = INVALID_HANDLE;
 Handle g_PeriodRoundsPlayedCookie = INVALID_HANDLE;
 
+Handle g_RatingCookie = INVALID_HANDLE;
+Handle g_RatingRoundsSurvivedCookie = INVALID_HANDLE;
+Handle g_RatingTotalRoundsCookie = INVALID_HANDLE;
+Handle g_RatingMultiKillValueCookie = INVALID_HANDLE;
+Handle g_RatingKillsCookie = INVALID_HANDLE;
+
 /** Client stats **/
 float g_PlayerRWS[MAXPLAYERS+1];
 int g_PlayerRounds[MAXPLAYERS+1];
@@ -239,8 +245,8 @@ public void SortPlayers(int teamSize, ArrayList firstTeam, ArrayList playerList,
 				float team_one_rws = 0.0;
 				float team_two_rws = 0.0;
 				
-				for (int i = 0; i < team_one.Length; i++) {
-					int client = team_one.Get(i);
+				for (int j = 0; j < team_one.Length; j++) {
+					int client = team_one.Get(j);
 					
 					float player_rws = g_PlayerRWS[client];
 			    	if (player_rws < 1) {
@@ -249,8 +255,8 @@ public void SortPlayers(int teamSize, ArrayList firstTeam, ArrayList playerList,
 			    	}
 					team_one_rws += player_rws;
 				}
-				for (int i = 0; i < team_two.Length; i++) {
-					int client = team_two.Get(i);
+				for (int j = 0; j < team_two.Length; j++) {
+					int client = team_two.Get(j);
 
 					float player_rws = g_PlayerRWS[client];
 			    	if (player_rws < 1) {
@@ -603,18 +609,27 @@ static void RatingUpdate(int client) {
     float AverageSPR = 0.317; // (average survived rounds per round)
     float AverageRMK = 1.277; // (average value calculated from rounds with multiple kills: (1K + 4*2K + 9*3K + 16*4K + 25*5K)/Rounds) 
 
-    g_PlayerRatingTotalRounds[i]++;
+    g_PlayerRatingTotalRounds[client]++;
 
-    g_PlayerRatingKills[i] +=  g_RoundKills[i];
-    g_PlayerRatingRoundsSurvived[i] +=  g_RoundSurvived[i];
-    g_PlayerRatingMultiKillValue[i] +=  g_RoundKills[i] * g_RoundKills[i];
+    g_PlayerRatingKills[client] +=  g_RoundKills[client];
+    g_PlayerRatingRoundsSurvived[client] +=  g_RoundSurvived[client];
+    g_PlayerRatingMultiKillValue[client] +=  g_RoundKills[client] * g_RoundKills[client];
 
-    float killRating = g_PlayerRatingKills[i] / g_PlayerRatingTotalRounds[i] / AverageKPR;
-    float survivalRating = g_PlayerRatingRoundsSurvived[i] / g_PlayerRatingTotalRounds[i] / AverageSPR;
-    float multiKillRating = g_PlayerRatingMultiKillValue[i]  / g_PlayerRatingTotalRounds[i] / AverageRMK;
+    float killRating = g_PlayerRatingKills[client] / g_PlayerRatingTotalRounds[client] / AverageKPR;
+    float survivalRating = g_PlayerRatingRoundsSurvived[client] / g_PlayerRatingTotalRounds[client] / AverageSPR;
+    float multiKillRating = g_PlayerRatingMultiKillValue[client]  / g_PlayerRatingTotalRounds[client] / AverageRMK;
 
-    g_PlayerRating[i] = (killRating = 0.7*survivalRating + multiKillRating) / 2.7;
+    g_PlayerRating[client] = (killRating + 0.7*survivalRating + multiKillRating) / 2.7;
 
+    //LogDebug("RoundUpdateRating(%L), g_RoundKills=%f, g_RoundSurvived=%f, survivalRating=%f, multirating=%f", client, g_playerRating[client], killRating, survivalRating, multiKillRating);
+    LogDebug("RoundUpdateRating(%L)", client);
+    LogDebug("roundkills(%f)", g_RoundKills[client]);
+    LogDebug("round survived(%f)", g_RoundSurvived[client]);
+    LogDebug("g_PlayerRatingKills(%f)", g_PlayerRatingKills[client]);
+    LogDebug("g_PlayerRatingRoundsSurvived(%f)",  g_PlayerRatingRoundsSurvived[client]);
+    LogDebug("g_PlayerRatingMultiKillValue(%f)",  g_PlayerRatingMultiKillValue[client]);
+    LogDebug("g_PlayerRatingTotalRounds(%f)",  g_PlayerRatingTotalRounds[client]);
+    LogDebug("RoundUpdateRating(%L), rating=%f, killRating=%f, survivalRating=%f, multirating=%f", client, g_PlayerRating[client], killRating, survivalRating, multiKillRating);
 }
 
 static float GetAlphaFactor(int client) {
@@ -690,7 +705,7 @@ public Action Command_RWS(int client, int args) {
         int target = FindTarget(client, arg1, true, false);
         if (target != -1) {
             if (HasStats(target))
-                PugSetupMessage(client, "%N has a RWS of %.1f with %d rounds played",
+                PugSetupMessage(client, "%N has a RWS of %.2f with %d rounds played",
                               target, g_PlayerRWS[target], g_PlayerRounds[target]);
             else
                 PugSetupMessage(client, "%N does not currently have stats stored", target);
@@ -712,7 +727,7 @@ public Action Command_PeriodRWS(int client, int args) {
         int target = FindTarget(client, arg1, true, false);
         if (target != -1) {
             if (HasStats(target))
-                PugSetupMessage(client, "%N has a RWS of %.1f with %d rounds played over the current period",
+                PugSetupMessage(client, "%N has a RWS of %.2f with %d rounds played over the current period",
                               target, g_PlayerPeriodRWS[target], g_PlayerPeriodRounds[target]);
             else
                 PugSetupMessage(client, "%N does not currently have stats stored", target);
@@ -734,7 +749,7 @@ public Action Command_Rating(int client, int args) {
         int target = FindTarget(client, arg1, true, false);
         if (target != -1) {
             if (HasStats(target))
-                PugSetupMessage(client, "%N has a rating of %.1f with %d rounds played",
+                PugSetupMessage(client, "%N has a rating of %.2f with %d rounds played",
                               target, g_PlayerRating[target], g_PlayerRatingTotalRounds[target]);
             else
                 PugSetupMessage(client, "%N does not currently have stats stored", target);
