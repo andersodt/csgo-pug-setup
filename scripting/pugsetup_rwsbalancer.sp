@@ -116,10 +116,10 @@ public void OnPluginStart() {
     g_PeriodRoundsPlayedCookie = RegClientCookie("pugsetup_period_roundsplayed", "Pugsetup rounds played over the current period", CookieAccess_Protected);
 
     g_RatingCookie = RegClientCookie("pugsetup_rating", "Pugsetup HLTV rating", CookieAccess_Protected);
-    g_RatingRoundsSurvivedCookie = RegClientCookie("pugsetup_rating_roundssurvived", "Pugsetup HLTV rating rounds survived", CookieAccess_Protected);
+    g_RatingRoundsSurvivedCookie = RegClientCookie("pugsetup_rating_rndssurvived", "Pugsetup HLTV rating rounds survived", CookieAccess_Protected);
     g_RatingTotalRoundsCookie = RegClientCookie("pugsetup_rating_totalrounds", "Pugsetup HLTV rating total rounds", CookieAccess_Protected);
     g_RatingKillsCookie = RegClientCookie("pugsetup_rating_kills", "Pugsetup HLTV rating kills", CookieAccess_Protected);
-    g_RatingMultiKillValueCookie = RegClientCookie("pugsetup_rating_multikillvalue", "Pugsetup HLTV rating multi kill value", CookieAccess_Protected);
+    g_RatingMultiKillValueCookie = RegClientCookie("pugsetup_rating_MKvalue", "Pugsetup HLTV rating multi kill value", CookieAccess_Protected);
 }
 
 public void OnAllPluginsLoaded() {
@@ -614,9 +614,9 @@ static void RatingUpdate(int client) {
     g_PlayerRatingRoundsSurvived[client] +=  g_RoundSurvived[client];
     g_PlayerRatingMultiKillValue[client] +=  g_RoundKills[client] * g_RoundKills[client];
 
-    float killRating = g_PlayerRatingKills[client] / g_PlayerRatingTotalRounds[client] / AverageKPR;
-    float survivalRating = g_PlayerRatingRoundsSurvived[client] / g_PlayerRatingTotalRounds[client] / AverageSPR;
-    float multiKillRating = g_PlayerRatingMultiKillValue[client]  / g_PlayerRatingTotalRounds[client] / AverageRMK;
+    float killRating = float(g_PlayerRatingKills[client]) / float(g_PlayerRatingTotalRounds[client]) / AverageKPR;
+    float survivalRating = float(g_PlayerRatingRoundsSurvived[client]) / float(g_PlayerRatingTotalRounds[client]) / AverageSPR;
+    float multiKillRating = float(g_PlayerRatingMultiKillValue[client])  / float(g_PlayerRatingTotalRounds[client]) / AverageRMK;
 
     g_PlayerRating[client] = (killRating + 0.7*survivalRating + multiKillRating) / 2.7;
 
@@ -693,6 +693,17 @@ public Action Command_DumpRWS(int client, int args) {
 
     return Plugin_Handled;
 }
+
+public Action Command_DumpRating(int client, int args) {
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsPlayer(i) && HasStats(i)) {
+            ReplyToCommand(client, "%L has Rating=%f, roundsplayed=%d", i, g_PlayerRating[i], g_PlayerRatingTotalRounds[i]);
+        }
+    }
+
+    return Plugin_Handled;
+}
+
 
 public Action Command_RWS(int client, int args) {
     if (g_AllowRWSCommandCvar.IntValue == 0) {
