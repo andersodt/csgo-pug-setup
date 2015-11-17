@@ -619,16 +619,6 @@ static void RatingUpdate(int client) {
     float multiKillRating = float(g_PlayerRatingMultiKillValue[client])  / float(g_PlayerRatingTotalRounds[client]) / AverageRMK;
 
     g_PlayerRating[client] = (killRating + 0.7*survivalRating + multiKillRating) / 2.7;
-
-    //LogDebug("RoundUpdateRating(%L), g_RoundKills=%f, g_RoundSurvived=%f, survivalRating=%f, multirating=%f", client, g_playerRating[client], killRating, survivalRating, multiKillRating);
-    LogDebug("RoundUpdateRating(%L)", client);
-    LogDebug("roundkills(%d)", g_RoundKills[client]);
-    LogDebug("round survived(%d)", g_RoundSurvived[client]);
-    LogDebug("g_PlayerRatingKills(%d)", g_PlayerRatingKills[client]);
-    LogDebug("g_PlayerRatingRoundsSurvived(%d)",  g_PlayerRatingRoundsSurvived[client]);
-    LogDebug("g_PlayerRatingMultiKillValue(%d)",  g_PlayerRatingMultiKillValue[client]);
-    LogDebug("g_PlayerRatingTotalRounds(%d)",  g_PlayerRatingTotalRounds[client]);
-    LogDebug("RoundUpdateRating(%L), rating=%f, killRating=%f, survivalRating=%f, multirating=%f", client, g_PlayerRating[client], killRating, survivalRating, multiKillRating);
 }
 
 static float GetAlphaFactor(int client) {
