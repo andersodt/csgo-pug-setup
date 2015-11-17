@@ -534,9 +534,10 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
             int team = GetClientTeam(i);
-            if (team == CS_TEAM_CT || team == CS_TEAM_T)
-                RWSUpdate(i);
-                RatingUpdate(i);
+            if (team == CS_TEAM_CT || team == CS_TEAM_T) {
+              RWSUpdate(i);
+              RatingUpdate(i);
+            }
         }
     }
 
