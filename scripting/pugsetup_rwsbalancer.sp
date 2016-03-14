@@ -131,8 +131,8 @@ public void OnPluginStart() {
     g_RWSCookie = RegClientCookie("pugsetup_rws", "Pugsetup RWS rating", CookieAccess_Protected);
     g_RoundsPlayedCookie = RegClientCookie("pugsetup_roundsplayed", "Pugsetup rounds played", CookieAccess_Protected);
 
-    //g_StdCookie = RegClientCookie("pugsetup_std", "Pugsetup Standard Deviation", CookieAccess_Protected);
-    //g_MeanCookie = RegClientCookie("pugsetup_mean", "Pugsetup Mean", CookieAccess_Protected);
+    g_StdCookie = RegClientCookie("pugsetup_std", "Pugsetup Standard Deviation", CookieAccess_Protected);
+    g_MeanCookie = RegClientCookie("pugsetup_mean", "Pugsetup Mean", CookieAccess_Protected);
 
     g_PeriodRWSCookie = RegClientCookie("pugsetup_period_rws", "Pugsetup RWS rating over the current period", CookieAccess_Protected);
     g_PeriodRoundsPlayedCookie = RegClientCookie("pugsetup_period_roundsplayed", "Pugsetup rounds played over the current period", CookieAccess_Protected);
@@ -170,10 +170,10 @@ public void OnClientCookiesCached(int client) {
     g_PlayerRWS[client] = GetCookieFloat(client, g_RWSCookie);
     g_PlayerRounds[client] = GetCookieInt(client, g_RoundsPlayedCookie);
 
-    //if (GetCookieFloat(client, g_MeanCookie) != 0) {
-        //g_PlayerStd[client] = GetCookieFloat(client, g_StdCookie);
-       //g_PlayerMean[client] = GetCookieFloat(client, g_MeanCookie);
-    //}
+    if (GetCookieFloat(client, g_MeanCookie) != 0) {
+        g_PlayerStd[client] = GetCookieFloat(client, g_StdCookie);
+        g_PlayerMean[client] = GetCookieFloat(client, g_MeanCookie);
+    }
     
     g_PlayerPeriodRWS[client] = GetCookieFloat(client, g_PeriodRWSCookie);
     g_PlayerPeriodRounds[client] = GetCookieInt(client, g_PeriodRoundsPlayedCookie);
@@ -229,8 +229,8 @@ public void WriteStats(int client) {
     SetCookieInt(client, g_PeriodRoundsPlayedCookie, g_PlayerPeriodRounds[client]);
     SetCookieFloat(client, g_PeriodRWSCookie, g_PlayerPeriodRWS[client]);
 
-    //SetCookieFloat(client, g_MeanCookie, g_PlayerMean[client]);
-    //SetCookieFloat(client, g_StdCookie, g_PlayerStd[client]);
+    SetCookieFloat(client, g_MeanCookie, g_PlayerMean[client]);
+    SetCookieFloat(client, g_StdCookie, g_PlayerStd[client]);
 
     SetCookieFloat(client, g_RatingCookie, g_PlayerRating[client]);
     SetCookieInt(client, g_RatingRoundsSurvivedCookie, g_PlayerRatingRoundsSurvived[client]);
@@ -871,7 +871,7 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
     float losingMean = otherTeamSum;
 
     // if the other team won, make sure to switch the means
-    if (selfToOtherTeamComparison == 1) {
+    if (selfToOtherTeamComparison == -1) {
         winningMean = otherTeamSum;
         losingMean = selfMeanSum;
     }
