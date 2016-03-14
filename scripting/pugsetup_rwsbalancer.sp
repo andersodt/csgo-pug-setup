@@ -131,8 +131,8 @@ public void OnPluginStart() {
     g_RWSCookie = RegClientCookie("pugsetup_rws", "Pugsetup RWS rating", CookieAccess_Protected);
     g_RoundsPlayedCookie = RegClientCookie("pugsetup_roundsplayed", "Pugsetup rounds played", CookieAccess_Protected);
 
-    g_StdCookie = RegClientCookie("pugsetup_std", "Pugsetup Standard Deviation", CookieAccess_Protected);
-    g_MeanCookie = RegClientCookie("pugsetup_mean", "Pugsetup Mean", CookieAccess_Protected);
+    //g_StdCookie = RegClientCookie("pugsetup_std", "Pugsetup Standard Deviation", CookieAccess_Protected);
+    //g_MeanCookie = RegClientCookie("pugsetup_mean", "Pugsetup Mean", CookieAccess_Protected);
 
     g_PeriodRWSCookie = RegClientCookie("pugsetup_period_rws", "Pugsetup RWS rating over the current period", CookieAccess_Protected);
     g_PeriodRoundsPlayedCookie = RegClientCookie("pugsetup_period_roundsplayed", "Pugsetup rounds played over the current period", CookieAccess_Protected);
@@ -170,10 +170,10 @@ public void OnClientCookiesCached(int client) {
     g_PlayerRWS[client] = GetCookieFloat(client, g_RWSCookie);
     g_PlayerRounds[client] = GetCookieInt(client, g_RoundsPlayedCookie);
 
-    if (GetCookieFloat(client, g_MeanCookie) != 0) {
-        g_PlayerStd[client] = GetCookieFloat(client, g_StdCookie);
-        g_PlayerMean[client] = GetCookieFloat(client, g_MeanCookie);
-    }
+    //if (GetCookieFloat(client, g_MeanCookie) != 0) {
+        //g_PlayerStd[client] = GetCookieFloat(client, g_StdCookie);
+       //g_PlayerMean[client] = GetCookieFloat(client, g_MeanCookie);
+    //}
     
     g_PlayerPeriodRWS[client] = GetCookieFloat(client, g_PeriodRWSCookie);
     g_PlayerPeriodRounds[client] = GetCookieInt(client, g_PeriodRoundsPlayedCookie);
@@ -229,8 +229,8 @@ public void WriteStats(int client) {
     SetCookieInt(client, g_PeriodRoundsPlayedCookie, g_PlayerPeriodRounds[client]);
     SetCookieFloat(client, g_PeriodRWSCookie, g_PlayerPeriodRWS[client]);
 
-    SetCookieFloat(client, g_MeanCookie, g_PlayerMean[client]);
-    SetCookieFloat(client, g_StdCookie, g_PlayerStd[client]);
+    //SetCookieFloat(client, g_MeanCookie, g_PlayerMean[client]);
+    //SetCookieFloat(client, g_StdCookie, g_PlayerStd[client]);
 
     SetCookieFloat(client, g_RatingCookie, g_PlayerRating[client]);
     SetCookieInt(client, g_RatingRoundsSurvivedCookie, g_PlayerRatingRoundsSurvived[client]);
@@ -847,24 +847,24 @@ public void calculateNewSkill(ArrayList winning_team, ArrayList losing_team) {
     LogDebug("[STD Squared Winning Team] [%.2f]", winningSumOfStdsSquared);
     LogDebug("[STD Squared Losing Team] [%.2f]", losingSumOfStdsSquared);
 
-    updatePlayerRatings(winning_team, winningMeanSum, winningSumOfStdsSquared, losingMeanSum, losingSumOfStdsSquared, 1);
-    updatePlayerRatings(losing_team, losingMeanSum, losingSumOfStdsSquared, winningMeanSum, winningSumOfStdsSquared, -1);
+    updatePlayerRatings(winning_team, winningMeanSum, winningSumOfStdsSquared, losingMeanSum, losingSumOfStdsSquared, 1.0);
+    updatePlayerRatings(losing_team, losingMeanSum, losingSumOfStdsSquared, winningMeanSum, winningSumOfStdsSquared, -1.0);
     LogDebug("[Finished Calculating Skill]");
 }
 
 // selfToOtherTeamComparison determines if selfTeam won or lost
 // 1 = win, -1 = lost
-public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float selfTeamSumOfStdsSquared, float otherTeamSum, float otherTeamSumOfStdsSquared, int selfToOtherTeamComparison) {
+public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float selfTeamSumOfStdsSquared, float otherTeamSum, float otherTeamSumOfStdsSquared, float selfToOtherTeamComparison) {
     float drawMargin = getDrawMarginFromDrawProbability(DRAW_PROBABILITY, BETA);
     float betaSquared = square(BETA);
     float tauSquared = square(DYNANMICS_FACTOR);
 
     int totalPlayers = selfTeam.Length * 2;
-
-    float c = square( selfTeamSumOfStdsSquared + otherTeamSumOfStdsSquared + totalPlayers*betaSquared );
-    LogDebug("[drawMargin] [%.2f]", drawMargin);
-    LogDebug("[tauSquared] [%.2f]", tauSquared);
-    LogDebug("[c] [%.2f]", c);
+    float c = SquareRoot( selfTeamSumOfStdsSquared + otherTeamSumOfStdsSquared + totalPlayers*betaSquared );
+    LogDebug("[drawMargin] [%.15f]", drawMargin);
+    LogDebug("[betaSquared] [%.15f]", betaSquared);
+    LogDebug("[tauSquared] [%.15f]", tauSquared);
+    LogDebug("[c] [%.15f]", c);
 
 
     float winningMean = selfMeanSum;
@@ -875,11 +875,11 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
         winningMean = otherTeamSum;
         losingMean = selfMeanSum;
     }
-    LogDebug("[winningMean] [%.2f]", winningMean);
-    LogDebug("[losingMean] [%.2f]", losingMean);
+    LogDebug("[winningMean] [%.15f]", winningMean);
+    LogDebug("[losingMean] [%.15f]", losingMean);
 
     float meanDelta = winningMean - losingMean;
-    LogDebug("[meanDelta] [%.2f]", meanDelta);
+    LogDebug("[meanDelta] [%.15f]", meanDelta);
 
     float v;
     float w;
@@ -888,33 +888,44 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
     v = Gauss_vExceedsMargin(meanDelta, drawMargin, c);
     w = Gauss_wExceedsMargin(meanDelta, drawMargin, c);
     rankMultiplier = selfToOtherTeamComparison;
-    LogDebug("[v] [%.2f]", v);
-    LogDebug("[w] [%.2f]", w);
-    LogDebug("[rankMultiplier] [%.2d]", rankMultiplier);
+    LogDebug("[v] [%.15f]", v);
+    LogDebug("[w] [%.15f]", w);
+    LogDebug("[rankMultiplier] [%.2f]", rankMultiplier);
 
+    LogDebug("[Updating team]");
     for(int i = 0; i < selfTeam.Length; i++) {
+
         int player = selfTeam.Get(i);
         float previousPlayerMean = g_PlayerMean[player];
         float previousPlayerStd = g_PlayerStd[player];
+        LogDebug("[previousPlayerMean] [%.15f]", previousPlayerMean);
+        LogDebug("[previousPlayerStd] [%.15f]", previousPlayerStd);
 
         float meanMultiplier = (square(previousPlayerStd) + tauSquared)/c;
         float stdDevMultiplier = (square(previousPlayerStd) + tauSquared)/square(c);
+        LogDebug("[meanMultiplier] [%.15f]", meanMultiplier);
+        LogDebug("[stdDevMultiplier] [%.15f]", stdDevMultiplier);
 
-        float playerMeanDelta = (rankMultiplier*meanMultiplier*v);
+        float playerMeanDelta = (rankMultiplier * meanMultiplier * v);
         float newMean = previousPlayerMean + playerMeanDelta;
 
+        LogDebug("[playerMeanDelta] [%.15f]", playerMeanDelta);
+
         float newStdDev =
-            SquareRoot((square(previousPlayerStd) + tauSquared)*(1 - w*stdDevMultiplier));
+            SquareRoot((square(previousPlayerStd) + tauSquared)*(1.0 - w*stdDevMultiplier));
 
         g_PlayerMean[player] = newMean;
         g_PlayerStd[player] = newStdDev;
+
+        LogDebug("[newStdDev] [%.15f]", newStdDev);
+        LogDebug("[newMean] [%.15f]", newMean);
     }
 }
 
 
 // Helpers
 public float getSumOfMeans(ArrayList team) {
-    float mean_sum = 0; 
+    float mean_sum = 0.0; 
 
     for (int i = 0; i < team.Length; i++ ) {
         int player = team.Get(i);
@@ -925,7 +936,7 @@ public float getSumOfMeans(ArrayList team) {
 }
 
 public float getSumOfStdsSquared(ArrayList team) {
-    float mean_stds_squared = 0; 
+    float mean_stds_squared = 0.0; 
 
     for (int i = 0; i < team.Length; i++ ) {
         int player = team.Get(i);
@@ -939,12 +950,11 @@ public float getSumOfStdsSquared(ArrayList team) {
 
 
 
-
 // Gauss things
 
 public float Gauss_inverseCumulativeTo(float x, float mean, float standardDeviation)
 {
-return mean - SquareRoot(2) * standardDeviation * Gauss_invErrorFuncCumulativeTo(2 * x);
+return mean * standardDeviation * Gauss_invErrorFuncCumulativeTo(2.0 * x);
 }
 
 
@@ -953,16 +963,18 @@ public float Gauss_vExceedsMargin(float teamPerformanceDifference, float drawMar
 }
 
 public float getDrawMarginFromDrawProbability(float drawProbability, float beta) {
-	float x = 0.5 * (drawProbability + 1.0);
-    return Gauss_inverseCumulativeTo(x, 0.0, 1.0) * SquareRoot(1+1) * beta;
+	float x = 0.5 * (drawProbability + 1.0);    
+    return Gauss_inverseCumulativeTo(x, 0.0, 1.0) * SquareRoot(2.0) * beta;
 }
 
 
 public float Gauss_VExceedsMarginCalculation(float teamPerformanceDifference, float drawMargin)
 {
+
     float denominator = Gauss_cumulativeTo(teamPerformanceDifference - drawMargin);
 
-    if (denominator < 0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002222758749)
+
+    if (denominator < 2.222758749e-162)
     {
         return -teamPerformanceDifference + drawMargin;
     }
@@ -979,7 +991,7 @@ public float Gauss_WExceedsMarginCalculation(float teamPerformanceDifference, fl
 {
     float denominator = Gauss_cumulativeTo(teamPerformanceDifference - drawMargin);
 
-    if (denominator < 0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000002222758749)
+    if (denominator < 2.222758749e-162)
     {
         if (teamPerformanceDifference < 0.0)
         {
@@ -993,50 +1005,50 @@ public float Gauss_WExceedsMarginCalculation(float teamPerformanceDifference, fl
 }
 
 public float Gauss_cumulativeTo(float x) {
-	return Gauss_cumulativeToCalculation(x, 0, 1);	
+	return Gauss_cumulativeToCalculation(x, 0.0, 1.0);	
 }
 
 public float Gauss_cumulativeToCalculation(float x, float mean, float standardDeviation)
 {
+
 float invsqrt2 = -0.707106781186547524400844362104;
 float result = Gauss_errorFunctionCumulativeTo(invsqrt2 * x);
+
+
 return 0.5 * result;
 }
 
 
 public float Gauss_invErrorFuncCumulativeTo(float p)
 {
-if (p >= 2.0)
-{
-return -100;
-}
-
-if (p <= 0.0)
-{
-return 100;
-}
-
-float pp = (p < 1.0) ? p : 2 - p;
-float t = SquareRoot(-2 * Logarithm(pp / 2.0)); // Initial guess
-float x = -0.70711 * ((2.30753 + t * 0.27061) / (1.0 + t * (0.99229 + t * 0.04481)) - t);
-
-for (int j = 0; j < 2; j++)
-{
-float err = Gauss_errorFunctionCumulativeTo(x) - pp;
-x += err / (1.12837916709551257 * Exponential(-square(x)) - x * err); // Halley 
-}
-
-return (p < 1.0) ? x : -x;
+    if (p >= 2.0)
+    {
+        return -100.0;
+    }
+    if (p <= 0.0)
+    {   
+        return 100.0;
+    }
+    float pp = (p < 1.0) ? p : 2.0 - p;
+    float t = SquareRoot(-2.0 * Logarithm(pp / 2.0)); // Initial guess
+    float x = -0.70711 * ((2.30753 + t * 0.27061) / (1.0 + t * (0.99229 + t * 0.04481)) - t);
+    for (int j = 0; j < 2; j++)
+    {
+        float err = Gauss_errorFunctionCumulativeTo(x) - pp;
+        x += err / (1.12837916709551257 * Exponential(-square(x)) - x * err); // Halley 
+    }
+    return (p < 1.0) ? x : -x;
 }
 
 
 
 public float Gauss_errorFunctionCumulativeTo(float x)
 {
+
 float z = FloatAbs(x);
 
 float t = 2.0 / (2.0 + z);
-float ty = 4 * t - 2;
+float ty = 4.0 * t - 2.0;
 
 float coefficients[] = {
 -1.3026537197817094, 
@@ -1068,7 +1080,7 @@ float coefficients[] = {
 1.21e-16, 
 -2.8e-17 };
 
-float ncof = 28; // 28 counted
+int ncof = 28; // 28 counted
 float d = 0.0;
 float dd = 0.0;
 
@@ -1078,7 +1090,6 @@ float tmp = d;
 d = ty * d - dd + coefficients[j];
 dd = tmp;
 }
-
 float ans = t * Exponential(-z * z + 0.5 * (coefficients[0] + ty * d) - dd);
 return (x >= 0.0) ? ans : (2.0 - ans);
 }
@@ -1086,13 +1097,15 @@ return (x >= 0.0) ? ans : (2.0 - ans);
 
 public float Gauss_at(float x)
 {
-	return Gauss_atCalculation(x, 0, 1);
+	return Gauss_atCalculation(x, 0.0, 1.0);
 }
 
 public float Gauss_atCalculation(float x, float mean, float standardDeviation)
 {
-float multiplier = 1.0 / (standardDeviation * SquareRoot(2 * M_PI));
-float expPart = Exponential((-1.0 * square(x - mean)) / (2 * square(standardDeviation)));
+
+float multiplier = 1.0 / (standardDeviation * SquareRoot(2.0 * M_PI));
+float expPart = Exponential((-1.0 * square(x - mean)) / (2.0 * square(standardDeviation)));
 float result = multiplier * expPart;
+
 return result;
 }
