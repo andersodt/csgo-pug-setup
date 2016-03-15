@@ -836,20 +836,20 @@ public float square(float numToSquare) {
 }
 
 public void calculateNewSkill(ArrayList winning_team, ArrayList losing_team) {
-    LogDebug("[Calculating Skill]");
+    //LogDebug("[Calculating Skill]");
     float winningMeanSum = getSumOfMeans(winning_team);
     float losingMeanSum = getSumOfMeans(losing_team);
-    LogDebug("[Means Winning Team] [%.2f]", winningMeanSum);
-    LogDebug("[Means Losing Team] [%.2f]", losingMeanSum);
+    //LogDebug("[Means Winning Team] [%.2f]", winningMeanSum);
+    //LogDebug("[Means Losing Team] [%.2f]", losingMeanSum);
 
     float winningSumOfStdsSquared = getSumOfStdsSquared(winning_team);
     float losingSumOfStdsSquared = getSumOfStdsSquared(losing_team);
-    LogDebug("[STD Squared Winning Team] [%.2f]", winningSumOfStdsSquared);
-    LogDebug("[STD Squared Losing Team] [%.2f]", losingSumOfStdsSquared);
+    //LogDebug("[STD Squared Winning Team] [%.2f]", winningSumOfStdsSquared);
+    //LogDebug("[STD Squared Losing Team] [%.2f]", losingSumOfStdsSquared);
 
     updatePlayerRatings(winning_team, winningMeanSum, winningSumOfStdsSquared, losingMeanSum, losingSumOfStdsSquared, 1.0);
     updatePlayerRatings(losing_team, losingMeanSum, losingSumOfStdsSquared, winningMeanSum, winningSumOfStdsSquared, -1.0);
-    LogDebug("[Finished Calculating Skill]");
+    //LogDebug("[Finished Calculating Skill]");
 }
 
 // selfToOtherTeamComparison determines if selfTeam won or lost
@@ -861,10 +861,10 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
 
     int totalPlayers = selfTeam.Length * 2;
     float c = SquareRoot( selfTeamSumOfStdsSquared + otherTeamSumOfStdsSquared + totalPlayers*betaSquared );
-    LogDebug("[drawMargin] [%.15f]", drawMargin);
-    LogDebug("[betaSquared] [%.15f]", betaSquared);
-    LogDebug("[tauSquared] [%.15f]", tauSquared);
-    LogDebug("[c] [%.15f]", c);
+    //LogDebug("[drawMargin] [%.15f]", drawMargin);
+    //LogDebug("[betaSquared] [%.15f]", betaSquared);
+    //LogDebug("[tauSquared] [%.15f]", tauSquared);
+    //LogDebug("[c] [%.15f]", c);
 
 
     float winningMean = selfMeanSum;
@@ -875,11 +875,11 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
         winningMean = otherTeamSum;
         losingMean = selfMeanSum;
     }
-    LogDebug("[winningMean] [%.15f]", winningMean);
-    LogDebug("[losingMean] [%.15f]", losingMean);
+    //LogDebug("[winningMean] [%.15f]", winningMean);
+    //LogDebug("[losingMean] [%.15f]", losingMean);
 
     float meanDelta = winningMean - losingMean;
-    LogDebug("[meanDelta] [%.15f]", meanDelta);
+    //LogDebug("[meanDelta] [%.15f]", meanDelta);
 
     float v;
     float w;
@@ -888,28 +888,28 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
     v = Gauss_vExceedsMargin(meanDelta, drawMargin, c);
     w = Gauss_wExceedsMargin(meanDelta, drawMargin, c);
     rankMultiplier = selfToOtherTeamComparison;
-    LogDebug("[v] [%.15f]", v);
-    LogDebug("[w] [%.15f]", w);
-    LogDebug("[rankMultiplier] [%.2f]", rankMultiplier);
+    //LogDebug("[v] [%.15f]", v);
+    //LogDebug("[w] [%.15f]", w);
+    //LogDebug("[rankMultiplier] [%.2f]", rankMultiplier);
 
-    LogDebug("[Updating team]");
+    //LogDebug("[Updating team]");
     for(int i = 0; i < selfTeam.Length; i++) {
 
         int player = selfTeam.Get(i);
         float previousPlayerMean = g_PlayerMean[player];
         float previousPlayerStd = g_PlayerStd[player];
-        LogDebug("[previousPlayerMean] [%.15f]", previousPlayerMean);
-        LogDebug("[previousPlayerStd] [%.15f]", previousPlayerStd);
+        //LogDebug("[previousPlayerMean] [%.15f]", previousPlayerMean);
+        //LogDebug("[previousPlayerStd] [%.15f]", previousPlayerStd);
 
         float meanMultiplier = (square(previousPlayerStd) + tauSquared)/c;
         float stdDevMultiplier = (square(previousPlayerStd) + tauSquared)/square(c);
-        LogDebug("[meanMultiplier] [%.15f]", meanMultiplier);
-        LogDebug("[stdDevMultiplier] [%.15f]", stdDevMultiplier);
+        //LogDebug("[meanMultiplier] [%.15f]", meanMultiplier);
+        //LogDebug("[stdDevMultiplier] [%.15f]", stdDevMultiplier);
 
         float playerMeanDelta = (rankMultiplier * meanMultiplier * v);
         float newMean = previousPlayerMean + playerMeanDelta;
 
-        LogDebug("[playerMeanDelta] [%.15f]", playerMeanDelta);
+        //LogDebug("[playerMeanDelta] [%.15f]", playerMeanDelta);
 
         float newStdDev =
             SquareRoot((square(previousPlayerStd) + tauSquared)*(1.0 - w*stdDevMultiplier));
@@ -917,8 +917,8 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
         g_PlayerMean[player] = newMean;
         g_PlayerStd[player] = newStdDev;
 
-        LogDebug("[newStdDev] [%.15f]", newStdDev);
-        LogDebug("[newMean] [%.15f]", newMean);
+        //LogDebug("[newStdDev] [%.15f]", newStdDev);
+        //LogDebug("[newMean] [%.15f]", newMean);
     }
 }
 
