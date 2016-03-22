@@ -562,8 +562,6 @@ public bool HelpfulAttack(int attacker, int victim) {
  */
 public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
     int winner = event.GetInt("winner");
-    ArrayList winningTeam = new ArrayList();
-    ArrayList losingTeam = new ArrayList();
 
     if (!IsMatchLive() || g_RecordRWSCvar.IntValue == 0)
         return;
@@ -575,6 +573,41 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
               RWSUpdate(i);
               RatingUpdate(i);
 
+            }
+        }
+    }
+}
+
+/**
+ * Match end event, updates rating values for everyone.
+ */
+public Action Event_MatchEnd(Event event, const char[] name, bool dontBroadcast) {
+    LogDebug("Does this fire on a tie???");
+
+    int t_score = event.GetInt("t_score");
+    int ct_score = event.GetInt("ct_score");
+    int winner = -1;
+
+    ArrayList winningTeam = new ArrayList();
+    ArrayList losingTeam = new ArrayList();
+
+    if (g_RecordRWSCvar.IntValue == 0)
+        return;
+
+    if (t_score > ct_score) {
+        winner == CS_TEAM_T
+    } else if (ct_score < t_score) {
+        winner == CT_TEAM_CT
+    }
+
+    LogDebug("T Score: %d", t_score);
+    LogDebug("CT Score: %d", ct_score);
+    LogDebug("Winner: %d", winner);
+
+    for (int i = 1; i <= MaxClients; i++) {
+        if (IsPlayer(i) && HasStats(i)) {
+            int team = GetClientTeam(i);
+            if (team == CS_TEAM_CT || team == CS_TEAM_T) {
               if (team == winner) {
                 winningTeam.Push(i);
               } else {
@@ -589,7 +622,6 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 
     delete winningTeam;
     delete losingTeam;
-
 }
 
 /**
