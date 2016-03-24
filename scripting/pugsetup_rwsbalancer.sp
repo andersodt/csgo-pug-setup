@@ -102,6 +102,7 @@ public void OnPluginStart() {
 
     HookEvent("bomb_defused", Event_Bomb);
     HookEvent("bomb_planted", Event_Bomb);
+    HookEvent("cs_win_panel_match", Event_MatchOver);
     HookEvent("player_death", Event_PlayerDeath);
     HookEvent("player_hurt", Event_DamageDealt);
     HookEvent("round_end", Event_RoundEnd);
@@ -580,7 +581,7 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 /**
  * Match end event, updates rating values for everyone.
  */
-public Action Event_MatchEnd(Event event, const char[] name, bool dontBroadcast) {
+public Action Event_MatchOver(Event event, const char[] name, bool dontBroadcast) {
     LogDebug("Does this fire on a tie???");
 
     int t_score = event.GetInt("t_score");
