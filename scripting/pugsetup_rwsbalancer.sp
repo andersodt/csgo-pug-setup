@@ -78,6 +78,15 @@ int g_RoundHealth[MAXPLAYERS+1];
 int g_RoundKills[MAXPLAYERS+1];
 int g_RoundSurvived[MAXPLAYERS+1];
 
+// Keep track of the team sums and stds in case of rage quits
+float g_CTStdSum = 0;
+float g_TStdSum = 0;
+
+float g_CTMeanSum = 0;
+float g_TMeanSum = 0;
+
+int g_lastTeamThatWon = -1;
+
 /** Cvars **/
 ConVar g_AllowRWSCommandCvar;
 ConVar g_RecordRWSCvar;
@@ -562,53 +571,95 @@ public bool HelpfulAttack(int attacker, int victim) {
  * Round end event, updates rws values for everyone.
  */
 public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
-
+    //LogDebug("[ROUND END]");
     if (!IsMatchLive() || g_RecordRWSCvar.IntValue == 0)
         return;
+
+    ArrayList ctTeam = new ArrayList();
+    ArrayList tTeam = new ArrayList();
+
+    int playersPlaying = 0;
+
+    g_lastTeamThatWon = event.GetInt("winner");
 
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
             int team = GetClientTeam(i);
             if (team == CS_TEAM_CT || team == CS_TEAM_T) {
-              RWSUpdate(i);
-              RatingUpdate(i);
-
+                if (team == CS_TEAM_CT) {
+                    ctTeam.Push(i);
+                } else {
+                    tTeam.Push(i);
+                }
+                playersPlaying++;
+                RWSUpdate(i);
+                RatingUpdate(i);
             }
         }
     }
+    // If the number of players playing in the game is the 
+    // same as the number of players allowed, then update the global 
+    // mean sum. 
+    if (playersPlaying == GetPugMaxPlayers()) {
+        LogDebug("Teams are full, making sure global mean is updated");
+        g_CTMeanSum = getSumOfMeans(ctTeam);
+        g_TMeanSum = getSumOfMeans(tTeam);
+
+        g_CTStdSum = getSumOfStdsSquared(ctTeam);
+        g_TStdSum = getSumOfStdsSquared(tTeam);
+
+        LogDebug("g_CTMeanSum: %f", g_CTMeanSum);
+        LogDebug("g_TMeanSum: %f", g_TMeanSum);
+        LogDebug("g_CTStdSum: %f", g_CTStdSum);
+        LogDebug("g_TStdSum: %f", g_TStdSum);
+    }
+    
+    delete ctTeam;
+    delete tTeam;
 }
 
 /**
  * Match end event, updates rating values for everyone.
  */
 public Action Event_MatchOver(Event event, const char[] name, bool dontBroadcast) {
-    LogDebug("Does this fire on a tie???");
-
-    int t_score = event.GetInt("t_score");
-    int ct_score = event.GetInt("ct_score");
-    int winner = -1;
-
-    ArrayList winningTeam = new ArrayList();
-    ArrayList losingTeam = new ArrayList();
+    //LogDebug("MATCH OVER");
 
     if (g_RecordRWSCvar.IntValue == 0)
         return;
 
-    if (t_score > ct_score) {
-        winner == CS_TEAM_T;
-    } else if (ct_score < t_score) {
-        winner == CS_TEAM_CT;
+    int t_score = event.GetInt("t_score");
+    int ct_score = event.GetInt("ct_score");
+
+    float winningStdSum = 0;
+    float winningMeanSum = 0;
+    float losingStdSum = 0;
+    float losingMeanSum = 0;
+
+    ArrayList winningTeam = new ArrayList();
+    ArrayList losingTeam = new ArrayList();
+
+    if (g_lastTeamThatWon == CS_TEAM_T) {
+        winningStdSum = g_TStdSum;
+        winningMeanSum = g_TMeanSum;
+        losingStdSum = g_CTStdSum;
+        losingMeanSum = g_CTMeanSum;
+
+    } else if (g_lastTeamThatWon == CS_TEAM_CT) {
+        winningStdSum = g_CTStdSum;
+        winningMeanSum = g_CTMeanSum;
+        losingStdSum = g_TStdSum;
+        losingMeanSum = g_TMeanSum;
     }
 
-    LogDebug("T Score: %d", t_score);
-    LogDebug("CT Score: %d", ct_score);
-    LogDebug("Winner: %d", winner);
+    // LogDebug("T Score: %i", t_score);
+    // LogDebug("CT Score: %i", ct_score);
+    // LogDebug("Winner: %i", g_lastTeamThatWon);
 
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
             int team = GetClientTeam(i);
             if (team == CS_TEAM_CT || team == CS_TEAM_T) {
-              if (team == winner) {
+              if (team == g_lastTeamThatWon) {
                 winningTeam.Push(i);
               } else {
                 losingTeam.Push(i);
@@ -618,7 +669,9 @@ public Action Event_MatchOver(Event event, const char[] name, bool dontBroadcast
         }
     }
 
-    calculateNewSkill(winningTeam, losingTeam);
+    // This will update the players mean and std upon completion of the game
+    updatePlayerRatings(winningTeam, winningMeanSum, winningStdSum, losingMeanSum, losingStdSum, 1.0);
+    updatePlayerRatings(losingTeam, losingMeanSum, losingStdSum, winningMeanSum, winningStdSum, -1.0);
 
     delete winningTeam;
     delete losingTeam;
@@ -867,23 +920,6 @@ public float square(float numToSquare) {
 	return (numToSquare*numToSquare);
 }
 
-public void calculateNewSkill(ArrayList winning_team, ArrayList losing_team) {
-   // LogDebug("[Calculating Skill]");
-    float winningMeanSum = getSumOfMeans(winning_team);
-    float losingMeanSum = getSumOfMeans(losing_team);
-    //LogDebug("[Means Winning Team] [%.2f]", winningMeanSum);
-    //LogDebug("[Means Losing Team] [%.2f]", losingMeanSum);
-
-    float winningSumOfStdsSquared = getSumOfStdsSquared(winning_team);
-    float losingSumOfStdsSquared = getSumOfStdsSquared(losing_team);
-    //LogDebug("[STD Squared Winning Team] [%.2f]", winningSumOfStdsSquared);
-    //LogDebug("[STD Squared Losing Team] [%.2f]", losingSumOfStdsSquared);
-
-    updatePlayerRatings(winning_team, winningMeanSum, winningSumOfStdsSquared, losingMeanSum, losingSumOfStdsSquared, 1.0);
-    updatePlayerRatings(losing_team, losingMeanSum, losingSumOfStdsSquared, winningMeanSum, winningSumOfStdsSquared, -1.0);
-    //LogDebug("[Finished Calculating Skill]");
-}
-
 // selfToOtherTeamComparison determines if selfTeam won or lost
 // 1 = win, -1 = lost
 public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float selfTeamSumOfStdsSquared, float otherTeamSum, float otherTeamSumOfStdsSquared, float selfToOtherTeamComparison) {
@@ -924,13 +960,13 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
     //LogDebug("[w] [%.15f]", w);
     //LogDebug("[rankMultiplier] [%.2f]", rankMultiplier);
 
-    LogDebug("[Updating team]");
+    //LogDebug("[Updating team]");
     for(int i = 0; i < selfTeam.Length; i++) {
 
         int player = selfTeam.Get(i);
         float previousPlayerMean = g_PlayerMean[player];
         float previousPlayerStd = g_PlayerStd[player];
-        LogDebug("[previousPlayerMean] [%.15f]", previousPlayerMean);
+        //LogDebug("[previousPlayerMean] [%.15f]", previousPlayerMean);
         //LogDebug("[previousPlayerStd] [%.15f]", previousPlayerStd);
 
         float meanMultiplier = (square(previousPlayerStd) + tauSquared)/c;
@@ -950,7 +986,7 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
         g_PlayerStd[player] = newStdDev;
 
         //LogDebug("[newStdDev] [%.15f]", newStdDev);
-        LogDebug("[newMean] [%.15f]", newMean);
+        //LogDebug("[newMean] [%.15f]", newMean);
     }
 }
 
@@ -977,9 +1013,6 @@ public float getSumOfStdsSquared(ArrayList team) {
 
     return mean_stds_squared;
 }
-
-
-
 
 
 // Gauss things
