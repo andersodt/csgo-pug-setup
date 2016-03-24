@@ -627,8 +627,6 @@ public Action Event_MatchOver(Event event, const char[] name, bool dontBroadcast
     if (g_RecordRWSCvar.IntValue == 0)
         return;
 
-    int t_score = event.GetInt("t_score");
-    int ct_score = event.GetInt("ct_score");
 
     float winningStdSum = 0;
     float winningMeanSum = 0;
@@ -650,10 +648,6 @@ public Action Event_MatchOver(Event event, const char[] name, bool dontBroadcast
         losingStdSum = g_TStdSum;
         losingMeanSum = g_TMeanSum;
     }
-
-    // LogDebug("T Score: %i", t_score);
-    // LogDebug("CT Score: %i", ct_score);
-    // LogDebug("Winner: %i", g_lastTeamThatWon);
 
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
