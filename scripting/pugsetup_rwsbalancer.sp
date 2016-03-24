@@ -561,7 +561,6 @@ public bool HelpfulAttack(int attacker, int victim) {
  * Round end event, updates rws values for everyone.
  */
 public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
-    int winner = event.GetInt("winner");
 
     if (!IsMatchLive() || g_RecordRWSCvar.IntValue == 0)
         return;
@@ -595,9 +594,9 @@ public Action Event_MatchEnd(Event event, const char[] name, bool dontBroadcast)
         return;
 
     if (t_score > ct_score) {
-        winner == CS_TEAM_T
+        winner == CS_TEAM_T;
     } else if (ct_score < t_score) {
-        winner == CT_TEAM_CT
+        winner == CS_TEAM_CT;
     }
 
     LogDebug("T Score: %d", t_score);
@@ -868,7 +867,7 @@ public float square(float numToSquare) {
 }
 
 public void calculateNewSkill(ArrayList winning_team, ArrayList losing_team) {
-    //LogDebug("[Calculating Skill]");
+   // LogDebug("[Calculating Skill]");
     float winningMeanSum = getSumOfMeans(winning_team);
     float losingMeanSum = getSumOfMeans(losing_team);
     //LogDebug("[Means Winning Team] [%.2f]", winningMeanSum);
@@ -924,13 +923,13 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
     //LogDebug("[w] [%.15f]", w);
     //LogDebug("[rankMultiplier] [%.2f]", rankMultiplier);
 
-    //LogDebug("[Updating team]");
+    LogDebug("[Updating team]");
     for(int i = 0; i < selfTeam.Length; i++) {
 
         int player = selfTeam.Get(i);
         float previousPlayerMean = g_PlayerMean[player];
         float previousPlayerStd = g_PlayerStd[player];
-        //LogDebug("[previousPlayerMean] [%.15f]", previousPlayerMean);
+        LogDebug("[previousPlayerMean] [%.15f]", previousPlayerMean);
         //LogDebug("[previousPlayerStd] [%.15f]", previousPlayerStd);
 
         float meanMultiplier = (square(previousPlayerStd) + tauSquared)/c;
@@ -950,7 +949,7 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
         g_PlayerStd[player] = newStdDev;
 
         //LogDebug("[newStdDev] [%.15f]", newStdDev);
-        //LogDebug("[newMean] [%.15f]", newMean);
+        LogDebug("[newMean] [%.15f]", newMean);
     }
 }
 
