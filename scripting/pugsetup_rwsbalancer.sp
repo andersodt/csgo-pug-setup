@@ -263,7 +263,7 @@ public void SplitRemainingPlayers(int teamSize, ArrayList playerList, ArrayList 
     }
 }
 
-public void SortPlayers(int teamSize, ArrayList firstTeam, ArrayList playerList, ArrayList &final_team_one, ArrayList &final_team_two, float &matchQuality) {
+public void SortPlayers(int teamSize, ArrayList firstTeam, ArrayList playerList, ArrayList &final_team_one, ArrayList &final_team_two, float &highestMatchQuality) {
 
     if (firstTeam.Length == teamSize) {
             // Narrow down team two
@@ -401,6 +401,7 @@ public void BalancerFunction(ArrayList players) {
     LogDebug("----------");
     for(int i = 0; i < team_one.Length; i++) {
         int t1player = team_one.Get(i);
+        LogDebug("%L [%.2f Skill]", t1player, g_PlayerMean[t1player]);
         SwitchPlayerTeam(t1player, CS_TEAM_CT);
     }
 
@@ -409,6 +410,7 @@ public void BalancerFunction(ArrayList players) {
     LogDebug("----------");
     for(int i = 0; i < team_two.Length; i++) {
         int t2player = team_two.Get(i);
+        LogDebug("%L [%.2f Skill]", t2player, g_PlayerMean[t2player]);
         SwitchPlayerTeam(t2player, CS_TEAM_T);
     }
     LogDebug("");
@@ -853,22 +855,22 @@ public float calculateMatchQuality(ArrayList team_one, ArrayList team_two) {
     float betaSquared = square(BETA);
     int totalPlayers = GetPugMaxPlayers();
 
-    teamOneMeanSum = getSumOfMeans(team_one);
-    teamOneStdSum = getSumOfStdsSquared(team_one);
+    float teamOneMeanSum = getSumOfMeans(team_one);
+    float teamOneStdSum = getSumOfStdsSquared(team_one);
 
 
-    teamTwoMeanSum = getSumOfMeans(team_two);
-    teamTwoStdSum = getSumOfStdsSquared(team_two);
+    float teamTwoMeanSum = getSumOfMeans(team_two);
+    float teamTwoStdSum = getSumOfStdsSquared(team_two);
 
     // This comes from equation 4.1 in the TrueSkill paper on page 8            
     // The equation was broken up into the part under the square root sign and 
     // the exponential part to make the code easier to read.
 
     //sqrt part
-    float sqrtPart = SquareRoot( ( totalPlayers * betaSquared ) / (totalPlayers*betaSquared + teamOneStdSum + teamTwoStdSum) )
+    float sqrtPart = SquareRoot( ( totalPlayers * betaSquared ) / (totalPlayers*betaSquared + teamOneStdSum + teamTwoStdSum) );
 
     // expo part
-    float expPart = Exponential( (-1*square(teamOneMeanSum - teamTwoMeanSum)) / (2*(totalPlayers*betaSquared + teamOneStdSum + teamTwoStdSum)) )
+    float expPart = Exponential( (-1*square(teamOneMeanSum - teamTwoMeanSum)) / (2*(totalPlayers*betaSquared + teamOneStdSum + teamTwoStdSum)) );
 
     return expPart*sqrtPart;
 }
