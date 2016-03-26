@@ -910,6 +910,30 @@ public void OnPlayerAddedToCaptainMenu(Menu menu, int client, char[] menuString,
 
 // Stuff for TrueSkill Follows
 
+public float calculateMatchQuality(ArrayList team_one, ArrayList team_two) {
+    float betaSquared = square(BETA);
+    int totalPlayers = GetPugMaxPlayers();
+
+    teamOneMeanSum = getSumOfMeans(team_one);
+    teamOneStdSum = getSumOfStdsSquared(team_one);
+
+
+    teamTwoMeanSum = getSumOfMeans(team_two);
+    teamTwoStdSum = getSumOfStdsSquared(team_two);
+
+    // This comes from equation 4.1 in the TrueSkill paper on page 8            
+    // The equation was broken up into the part under the square root sign and 
+    // the exponential part to make the code easier to read.
+
+    //sqrt part
+    float sqrtPart = SquareRoot( ( totalPlayers * betaSquared ) / (totalPlayers*betaSquared + teamOneStdSum + teamTwoStdSum) )
+
+    // expo part
+    float expPart = Exponential( (-1*square(teamOneMeanSum - teamTwoMeanSum)) / (2*(totalPlayers*betaSquared + teamOneStdSum + teamTwoStdSum)) )
+
+    return expPart*sqrtPart;
+}
+
 public float square(float numToSquare) {
 	return (numToSquare*numToSquare);
 }
@@ -921,7 +945,7 @@ public void updatePlayerRatings(ArrayList selfTeam, float selfMeanSum, float sel
     float betaSquared = square(BETA);
     float tauSquared = square(DYNANMICS_FACTOR);
 
-    int totalPlayers = selfTeam.Length * 2;
+    int totalPlayers = GetPugMaxPlayers();
     float c = SquareRoot( selfTeamSumOfStdsSquared + otherTeamSumOfStdsSquared + totalPlayers*betaSquared );
     //LogDebug("[drawMargin] [%.15f]", drawMargin);
     //LogDebug("[betaSquared] [%.15f]", betaSquared);
