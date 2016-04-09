@@ -561,7 +561,6 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
     // same as the number of players allowed, then update the global 
     // mean sum. 
     if (playersPlaying == GetPugMaxPlayers()) {
-        LogDebug("Teams are full, making sure global mean is updated");
         g_CTMeanSum = getSumOfMeans(ctTeam);
         g_TMeanSum = getSumOfMeans(tTeam);
 
