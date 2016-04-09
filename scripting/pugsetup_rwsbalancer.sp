@@ -130,6 +130,9 @@ public void OnPluginStart() {
     RegConsoleCmd("sm_period_rws", Command_PeriodRWS, "Show player's period rws");
     AddChatAlias(".rws", "sm_period_rws");
 
+    RegConsoleCmd("sm_skill", Command_Skill, "Show player's TrueSkill");
+    AddChatAlias(".skill", "sm_skill");
+
 
     g_AllowRWSCommandCvar = CreateConVar("sm_pugsetup_rws_allow_rws_command", "0", "Whether players can use the .rws or !rws command on other players");
     g_RecordRWSCvar = CreateConVar("sm_pugsetup_rws_record_stats", "1", "Whether rws should be recorded during live matches (set to 0 to disable changing players rws stats)");
@@ -395,54 +398,58 @@ public void BalancerFunction(ArrayList players) {
 
     FindCombinations( (GetPugMaxPlayers() / 2), players, team_one, team_two, highestMatchQuality);
 
-    
-    // SortPlayers((GetPugMaxPlayers() / 2), players, players, team_one, team_two, minRwsDifference);
-    PugSetupMessageToAll("[TEAM ONE]");
-    LogDebug("[TEAM ONE]");
-    LogDebug("----------");
-    for(int i = 0; i < team_one.Length; i++) {
+     for(int i = 0; i < team_one.Length; i++) {
         int t1player = team_one.Get(i);
-        LogDebug("%L [%.2f Skill]", t1player, g_PlayerMean[t1player]);
-        PugSetupMessageToAll("%L [%.2f Skill]", t1player, g_PlayerMean[t1player]);
         SwitchPlayerTeam(t1player, CS_TEAM_CT);
     }
-
-    LogDebug("");
-    PugSetupMessageToAll("");
-    LogDebug("[TEAM TWO]");
-    PugSetupMessageToAll("[TEAM TWO]");
-    LogDebug("----------");
     for(int i = 0; i < team_two.Length; i++) {
         int t2player = team_two.Get(i);
-        LogDebug("%L [%.2f Skill]", t2player, g_PlayerMean[t2player]);
-        PugSetupMessageToAll("%L [%.2f Skill]", t2player, g_PlayerMean[t2player]);
         SwitchPlayerTeam(t2player, CS_TEAM_T);
     }
-    
-
-    // Sort out spectators
-
-    PugSetupMessageToAll("");
-    LogDebug("");
-    PugSetupMessageToAll("[SPECTATORS]");
-    LogDebug("[SPECTATORS]");
-    LogDebug("----------");
     for (int i = 0; i < players.Length; i++) {
         if ( FindValueInArray( team_one, players.Get(i) ) == -1 && FindValueInArray( team_two, players.Get(i) ) == -1 ) {
             int spectator = players.Get(i);
             if (IsPlayer(spectator)) {
-                LogDebug("-- %L", spectator);
-                PugSetupMessageToAll("-- %L", spectator);
                 SwitchPlayerTeam(spectator, CS_TEAM_SPECTATOR);
             }
         } 
     }
+
     
-    LogDebug("");
+    PugSetupMessageToAll("[TEAM ONE]");
+    for(int i = 0; i < team_one.Length; i++) {
+        int t1player = team_one.Get(i);
+        PugSetupMessageToAll("[%.1f] %N", g_PlayerMean[t1player], t1player);
+    }
+
     PugSetupMessageToAll("");
-    LogDebug("[Final Team Status]");
-    LogDebug("[The match quality is: %.2f]", highestMatchQuality);
-    PugSetupMessageToAll("[The match quality is: %.2f]", highestMatchQuality);
+    PugSetupMessageToAll("[TEAM TWO]");
+    for(int i = 0; i < team_two.Length; i++) {
+        int t2player = team_two.Get(i);
+        PugSetupMessageToAll("[%.1f] %N", g_PlayerMean[t2player], t2player);
+    }
+
+
+
+    // Sort out spectators
+
+    PugSetupMessageToAll("");
+    PugSetupMessageToAll("[SPECTATORS]");
+
+    for (int i = 0; i < players.Length; i++) {
+        if ( FindValueInArray( team_one, players.Get(i) ) == -1 && FindValueInArray( team_two, players.Get(i) ) == -1 ) {
+            int spectator = players.Get(i);
+            if (IsPlayer(spectator)) {
+                LogDebug("-- %N", spectator);
+                PugSetupMessageToAll("-- %N", spectator);
+            }
+        } 
+    }
+    
+    PugSetupMessageToAll("");
+    PugSetupMessageToAll("[%.1f] Team One Total", getSumOfMeans(team_one));
+    PugSetupMessageToAll("[%.1f] Team Two Total", getSumOfMeans(team_two));
+    PugSetupMessageToAll("[%.2f] Match Quality", highestMatchQuality);
 
     delete team_one;
     delete team_two;
@@ -560,11 +567,6 @@ public Action Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 
         g_CTStdSum = getSumOfStdsSquared(ctTeam);
         g_TStdSum = getSumOfStdsSquared(tTeam);
-
-        LogDebug("g_CTMeanSum: %f", g_CTMeanSum);
-        LogDebug("g_TMeanSum: %f", g_TMeanSum);
-        LogDebug("g_CTStdSum: %f", g_CTStdSum);
-        LogDebug("g_TStdSum: %f", g_TStdSum);
     }
     
     delete ctTeam;
@@ -681,8 +683,8 @@ static void RWSUpdate(int client) {
     g_PlayerPeriodRWS[client] = (1.0 - periodAlpha) * g_PlayerPeriodRWS[client] + periodAlpha * rws;
     g_PlayerPeriodRounds[client]++;
     
-    LogDebug("RoundUpdate(%L), alpha=%f, round_points=%i, round_rws=%f, new_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerRWS[client]);
-    LogDebug("RoundUpdate(%L), alpha=%f, round_points=%i, round_rws=%f, new_period_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerPeriodRWS[client]);
+    LogDebug("RoundUpdate(%N), alpha=%f, round_points=%i, round_rws=%f, new_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerRWS[client]);
+    LogDebug("RoundUpdate(%N), alpha=%f, round_points=%i, round_rws=%f, new_period_rws=%f", client, alpha, g_RoundPoints[client], rws, g_PlayerPeriodRWS[client]);
 }
 
 static void RatingUpdate(int client) {
@@ -759,7 +761,7 @@ public void OnReadyToStartCheck(int readyPlayers, int totalPlayers) {
 public Action Command_DumpRWS(int client, int args) {
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
-            ReplyToCommand(client, "%L has RWS=%f, roundsplayed=%d", i, g_PlayerRWS[i], g_PlayerRounds[i]);
+            ReplyToCommand(client, "%N has RWS=%f, roundsplayed=%d", i, g_PlayerRWS[i], g_PlayerRounds[i]);
         }
     }
 
@@ -769,7 +771,7 @@ public Action Command_DumpRWS(int client, int args) {
 public Action Command_DumpSkill(int client, int args) {
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
-            ReplyToCommand(client, "%L has Mean=%f, Stdd=%f", i, g_PlayerMean[i], g_PlayerStd[i]);
+            ReplyToCommand(client, "%N has Mean=%f, Stdd=%f", i, g_PlayerMean[i], g_PlayerStd[i]);
         }
     }
 
@@ -779,7 +781,7 @@ public Action Command_DumpSkill(int client, int args) {
 public Action Command_DumpRating(int client, int args) {
     for (int i = 1; i <= MaxClients; i++) {
         if (IsPlayer(i) && HasStats(i)) {
-            ReplyToCommand(client, "%L has Rating=%f, roundsplayed=%d", i, g_PlayerRating[i], g_PlayerRatingTotalRounds[i]);
+            ReplyToCommand(client, "%N has Rating=%f, roundsplayed=%d", i, g_PlayerRating[i], g_PlayerRatingTotalRounds[i]);
         }
     }
 
@@ -848,6 +850,28 @@ public Action Command_Rating(int client, int args) {
         }
     } else {
         PugSetupMessage(client, "Usage: .rating <player>");
+    }
+
+    return Plugin_Handled;
+}
+
+public Action Command_Skill(int client, int args) {
+    if (g_AllowRWSCommandCvar.IntValue == 0) {
+        return Plugin_Handled;
+    }
+
+    char arg1[32];
+    if (args >= 1 && GetCmdArg(1, arg1, sizeof(arg1))) {
+        int target = FindTarget(client, arg1, true, false);
+        if (target != -1) {
+            if (HasStats(target))
+                PugSetupMessage(client, "%N has a mean skill of %.1f +/- %.1f",
+                              target, g_PlayerMean[target], g_PlayerStd[target]);
+            else
+                PugSetupMessage(client, "%N does not currently have stats stored", target);
+        }
+    } else {
+        PugSetupMessage(client, "Usage: .skill <player>");
     }
 
     return Plugin_Handled;
