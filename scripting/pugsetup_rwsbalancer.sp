@@ -397,29 +397,34 @@ public void BalancerFunction(ArrayList players) {
 
     
     // SortPlayers((GetPugMaxPlayers() / 2), players, players, team_one, team_two, minRwsDifference);
+    PugSetupMessageToAll("[TEAM ONE]");
     LogDebug("[TEAM ONE]");
     LogDebug("----------");
     for(int i = 0; i < team_one.Length; i++) {
         int t1player = team_one.Get(i);
         LogDebug("%L [%.2f Skill]", t1player, g_PlayerMean[t1player]);
+        PugSetupMessageToAll("%L [%.2f Skill]", t1player, g_PlayerMean[t1player]);
         SwitchPlayerTeam(t1player, CS_TEAM_CT);
     }
 
     LogDebug("");
+    PugSetupMessageToAll("");
     LogDebug("[TEAM TWO]");
+    PugSetupMessageToAll("[TEAM TWO]");
     LogDebug("----------");
     for(int i = 0; i < team_two.Length; i++) {
         int t2player = team_two.Get(i);
         LogDebug("%L [%.2f Skill]", t2player, g_PlayerMean[t2player]);
+        PugSetupMessageToAll("%L [%.2f Skill]", t2player, g_PlayerMean[t2player]);
         SwitchPlayerTeam(t2player, CS_TEAM_T);
     }
-    LogDebug("");
-    LogDebug("[Final Team Status]");
-    LogDebug("[The match quality is: %.2f]", highestMatchQuality);
+    
 
     // Sort out spectators
 
+    PugSetupMessageToAll("");
     LogDebug("");
+    PugSetupMessageToAll("[SPECTATORS]");
     LogDebug("[SPECTATORS]");
     LogDebug("----------");
     for (int i = 0; i < players.Length; i++) {
@@ -427,10 +432,17 @@ public void BalancerFunction(ArrayList players) {
             int spectator = players.Get(i);
             if (IsPlayer(spectator)) {
                 LogDebug("-- %L", spectator);
+                PugSetupMessageToAll("-- %L", spectator);
                 SwitchPlayerTeam(spectator, CS_TEAM_SPECTATOR);
             }
         } 
     }
+    
+    LogDebug("");
+    PugSetupMessageToAll("");
+    LogDebug("[Final Team Status]");
+    LogDebug("[The match quality is: %.2f]", highestMatchQuality);
+    PugSetupMessageToAll("[The match quality is: %.2f]", highestMatchQuality);
 
     delete team_one;
     delete team_two;
